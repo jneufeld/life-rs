@@ -62,7 +62,7 @@ impl Life {
 
             println!("{self}");
 
-            let pause_time = Duration::from_secs(2);
+            let pause_time = Duration::from_millis(100);
 
             std::thread::sleep(pause_time);
         }
@@ -76,17 +76,25 @@ impl Life {
     /// A tick is an iteration of the game. Every iteration, update all cells
     /// according to the rules of the game.
     fn tick(&mut self) {
+        let mut changes = Vec::new();
+
+        // Find cells that need to change state. Update them in a later loop so
+        // we don't invalidate the current state.
         for (y, row) in self.cells.iter().enumerate() {
             for (x, cell) in row.iter().enumerate() {
                 let is_alive = cell.get();
                 let neighbours = self.count_neighbours(x, y);
 
                 if is_alive && (neighbours > 3 || neighbours < 2) {
-                    cell.set(false);
+                    changes.push((x, y, false));
                 } else if !is_alive && neighbours == 3 {
-                    cell.set(true);
+                    changes.push((x, y, true));
                 }
             }
+        }
+
+        for (x, y, alive) in changes {
+            self.cells[y][x].set(alive);
         }
     }
 

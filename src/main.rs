@@ -1,14 +1,14 @@
 mod life;
 
-use crate::life::Life;
+use crate::life::Grid;
 
 fn main() {
     let seed = glider_two(1, 1);
-    let mut life = Life::new(50, 20, seed);
+    let mut life = Grid::new(50, 20, seed);
 
     life.play();
 
-    println!("Life ended after {} generations", life.steps);
+    println!("Life ended after {} generations", life.steps());
 }
 
 fn glider_one(x: usize, y: usize) -> Vec<(usize, usize)> {

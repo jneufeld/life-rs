@@ -4,15 +4,19 @@ use std::{
     time::Duration,
 };
 
-pub struct Life {
+/// The grid of cells making up the game of life.
+pub struct Grid {
     width: usize,
     height: usize,
-    pub steps: u128,
+    steps: u128,
+    life: bool,
     cells: Vec<Vec<Cell<bool>>>,
 }
 
-impl Life {
-    pub fn new(width: usize, height: usize, seed: Vec<(usize, usize)>) -> Life {
+impl Grid {
+    /// Creates a grid or panics if arguments are invalid. Width and height must
+    /// be greater than zero. Seed positions must be on the grid.
+    pub fn new(width: usize, height: usize, seed: Vec<(usize, usize)>) -> Grid {
         if width == 0 {
             panic!("Width must be greater than zero (received {width})");
         }
@@ -44,15 +48,16 @@ impl Life {
             cells[y][x].set(true);
         }
 
-        Life {
+        Grid {
             width,
             height,
-            steps: 0,
             cells,
+            steps: 0,
+            life: true,
         }
     }
 
-    /// Plays the game by printing the result and pausing between steps.
+    /// Plays the game and prints each iteration on the screen.
     pub fn play(&mut self) {
         println!("{self}");
 
@@ -68,9 +73,14 @@ impl Life {
         }
     }
 
-    /// Returns true when any cell is alive.
+    pub fn steps(&self) -> u128 {
+        self.steps
+    }
+
+    /// Returns true when there's evidence of life. When cells stop changing
+    /// life can't evolve.
     fn can_continue(&self) -> bool {
-        self.cells.iter().flatten().any(|cell| cell.get())
+        self.life
     }
 
     /// A tick is an iteration of the game. Every iteration, update all cells
@@ -93,8 +103,10 @@ impl Life {
             }
         }
 
-        for (x, y, alive) in changes {
-            self.cells[y][x].set(alive);
+        self.life = if !changes.is_empty() { true } else { false };
+
+        for (x, y, status) in changes {
+            self.cells[y][x].set(status);
         }
     }
 
@@ -139,7 +151,7 @@ impl Life {
     }
 }
 
-impl fmt::Display for Life {
+impl fmt::Display for Grid {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut cell_displays = String::new();
 
@@ -163,60 +175,60 @@ mod tests {
     #[test]
     fn empty_seed() {
         let seed = vec![];
-        let life = Life::new(10, 10, seed);
+        let grid = Grid::new(10, 10, seed);
 
-        assert_eq!(0, life.count_neighbours(0, 0));
+        assert_eq!(0, grid.count_neighbours(0, 0));
     }
 
     #[test]
     fn glider_one() {
         let seed = vec![(1, 1), (1, 3), (2, 2), (2, 3), (3, 2)];
-        let life = Life::new(10, 10, seed);
+        let grid = Grid::new(10, 10, seed);
 
-        assert_eq!(1, life.count_neighbours(0, 0));
-        assert_eq!(1, life.count_neighbours(1, 0));
-        assert_eq!(1, life.count_neighbours(2, 0));
-        assert_eq!(0, life.count_neighbours(3, 0));
+        assert_eq!(1, grid.count_neighbours(0, 0));
+        assert_eq!(1, grid.count_neighbours(1, 0));
+        assert_eq!(1, grid.count_neighbours(2, 0));
+        assert_eq!(0, grid.count_neighbours(3, 0));
 
-        assert_eq!(1, life.count_neighbours(0, 1));
-        assert_eq!(1, life.count_neighbours(1, 1));
-        assert_eq!(3, life.count_neighbours(2, 1));
-        assert_eq!(2, life.count_neighbours(3, 1));
+        assert_eq!(1, grid.count_neighbours(0, 1));
+        assert_eq!(1, grid.count_neighbours(1, 1));
+        assert_eq!(3, grid.count_neighbours(2, 1));
+        assert_eq!(2, grid.count_neighbours(3, 1));
 
-        assert_eq!(2, life.count_neighbours(0, 2));
-        assert_eq!(4, life.count_neighbours(1, 2));
-        assert_eq!(4, life.count_neighbours(2, 2));
-        assert_eq!(2, life.count_neighbours(3, 2));
+        assert_eq!(2, grid.count_neighbours(0, 2));
+        assert_eq!(4, grid.count_neighbours(1, 2));
+        assert_eq!(4, grid.count_neighbours(2, 2));
+        assert_eq!(2, grid.count_neighbours(3, 2));
 
-        assert_eq!(1, life.count_neighbours(0, 3));
-        assert_eq!(2, life.count_neighbours(1, 3));
-        assert_eq!(3, life.count_neighbours(2, 3));
-        assert_eq!(3, life.count_neighbours(3, 3));
+        assert_eq!(1, grid.count_neighbours(0, 3));
+        assert_eq!(2, grid.count_neighbours(1, 3));
+        assert_eq!(3, grid.count_neighbours(2, 3));
+        assert_eq!(3, grid.count_neighbours(3, 3));
     }
 
     #[test]
     fn glider_two() {
         let seed = vec![(1, 2), (2, 3), (3, 1), (3, 2), (3, 3)];
-        let life = Life::new(10, 10, seed);
+        let grid = Grid::new(10, 10, seed);
 
-        assert_eq!(0, life.count_neighbours(0, 0));
-        assert_eq!(0, life.count_neighbours(1, 0));
-        assert_eq!(1, life.count_neighbours(2, 0));
-        assert_eq!(1, life.count_neighbours(3, 0));
+        assert_eq!(0, grid.count_neighbours(0, 0));
+        assert_eq!(0, grid.count_neighbours(1, 0));
+        assert_eq!(1, grid.count_neighbours(2, 0));
+        assert_eq!(1, grid.count_neighbours(3, 0));
 
-        assert_eq!(1, life.count_neighbours(0, 1));
-        assert_eq!(1, life.count_neighbours(1, 1));
-        assert_eq!(3, life.count_neighbours(2, 1));
-        assert_eq!(1, life.count_neighbours(3, 1));
+        assert_eq!(1, grid.count_neighbours(0, 1));
+        assert_eq!(1, grid.count_neighbours(1, 1));
+        assert_eq!(3, grid.count_neighbours(2, 1));
+        assert_eq!(1, grid.count_neighbours(3, 1));
 
-        assert_eq!(1, life.count_neighbours(0, 2));
-        assert_eq!(1, life.count_neighbours(1, 2));
-        assert_eq!(5, life.count_neighbours(2, 2));
-        assert_eq!(3, life.count_neighbours(3, 2));
+        assert_eq!(1, grid.count_neighbours(0, 2));
+        assert_eq!(1, grid.count_neighbours(1, 2));
+        assert_eq!(5, grid.count_neighbours(2, 2));
+        assert_eq!(3, grid.count_neighbours(3, 2));
 
-        assert_eq!(1, life.count_neighbours(0, 3));
-        assert_eq!(2, life.count_neighbours(1, 3));
-        assert_eq!(3, life.count_neighbours(2, 3));
-        assert_eq!(2, life.count_neighbours(3, 3));
+        assert_eq!(1, grid.count_neighbours(0, 3));
+        assert_eq!(2, grid.count_neighbours(1, 3));
+        assert_eq!(3, grid.count_neighbours(2, 3));
+        assert_eq!(2, grid.count_neighbours(3, 3));
     }
 }

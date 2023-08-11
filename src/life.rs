@@ -4,6 +4,8 @@ use std::{
     time::Duration,
 };
 
+use crate::seed::{Point, Seed};
+
 /// The grid of cells making up the game of life.
 pub struct Grid {
     width: usize,
@@ -16,7 +18,7 @@ pub struct Grid {
 impl Grid {
     /// Creates a grid or panics if arguments are invalid. Width and height must
     /// be greater than zero. Seed positions must be on the grid.
-    pub fn new(width: usize, height: usize, seed: Vec<(usize, usize)>) -> Grid {
+    pub fn new(width: usize, height: usize, seeds: Vec<Seed>) -> Grid {
         if width == 0 {
             panic!("Width must be greater than zero (received {width})");
         }
@@ -25,27 +27,27 @@ impl Grid {
             panic!("Height must be greater than zero (received {height})");
         }
 
+        // Create empty grid
         let mut cells = Vec::new();
-
         for _ in 0..height {
             let mut row = Vec::new();
-
             for _ in 0..width {
                 row.push(Cell::new(false));
             }
-
             cells.push(row);
         }
 
-        for (x, y) in seed {
-            if x > width - 1 {
-                panic!("Seed cell is outside board. x={x} but width={width}.");
+        // Add seeds or panic
+        for seed in seeds {
+            for Point { x, y } in seed.points() {
+                if *x > width - 1 {
+                    panic!("Seed cell is outside board. x={x} but width={width}.");
+                }
+                if *y > height - 1 {
+                    panic!("Seed cell is outside board. y={y} but height={height}.");
+                }
+                cells[*y][*x].set(true);
             }
-            if y > height - 1 {
-                panic!("Seed cell is outside board. y={y} but height={height}.");
-            }
-
-            cells[y][x].set(true);
         }
 
         Grid {
@@ -95,7 +97,7 @@ impl Grid {
                 let is_alive = cell.get();
                 let neighbours = self.count_neighbours(x, y);
 
-                if is_alive && (neighbours > 3 || neighbours < 2) {
+                if is_alive && !(2..=3).contains(&neighbours) {
                     changes.push((x, y, false));
                 } else if !is_alive && neighbours == 3 {
                     changes.push((x, y, true));
@@ -103,7 +105,7 @@ impl Grid {
             }
         }
 
-        self.life = if !changes.is_empty() { true } else { false };
+        self.life = !changes.is_empty();
 
         for (x, y, status) in changes {
             self.cells[y][x].set(status);
@@ -182,8 +184,8 @@ mod tests {
 
     #[test]
     fn glider_one() {
-        let seed = vec![(1, 1), (1, 3), (2, 2), (2, 3), (3, 2)];
-        let grid = Grid::new(10, 10, seed);
+        let seed = Seed::glider_one(1, 1);
+        let grid = Grid::new(10, 10, vec![seed]);
 
         assert_eq!(1, grid.count_neighbours(0, 0));
         assert_eq!(1, grid.count_neighbours(1, 0));
@@ -208,8 +210,8 @@ mod tests {
 
     #[test]
     fn glider_two() {
-        let seed = vec![(1, 2), (2, 3), (3, 1), (3, 2), (3, 3)];
-        let grid = Grid::new(10, 10, seed);
+        let seed = Seed::glider_two(1, 1);
+        let grid = Grid::new(10, 10, vec![seed]);
 
         assert_eq!(0, grid.count_neighbours(0, 0));
         assert_eq!(0, grid.count_neighbours(1, 0));
